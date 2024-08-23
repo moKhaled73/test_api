@@ -1,6 +1,7 @@
 from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+import base64
 from PIL import Image, ImageEnhance
 import io
 
@@ -38,8 +39,14 @@ async def upload_image(file: UploadFile = File(...)):
     combined.save(img_byte_arr, format="JPEG")
     img_byte_arr.seek(0)
 
-    # Return the modified image
-    return StreamingResponse(img_byte_arr, media_type="image/jpeg")
+    # Convert the image to base64
+    img_base64 = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
+
+    # # Add the data URI scheme to the base64 string
+    img_base64 = f"data:image/jpeg;base64,{img_base64}"
+
+    # Return the image as a base64 string with the data URI prefix
+    return JSONResponse(content={"image_base64": img_base64})
 
 @app.get("/")
 def root():
