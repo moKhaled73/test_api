@@ -6,7 +6,7 @@
     <title>Document</title>
   </head>
   <body>
-    <input type="file" id="upload-image" accept="image" />
+    <input type="file" id="upload-image" accept="image/*" />
     <div id="res" style="width: 500px; height: 200px"></div>
     <script>
       const uploadImage = document.getElementById("upload-image");
@@ -14,19 +14,38 @@
 
       uploadImage.addEventListener("change", async (e) => {
         try {
-          const formData = new FormData();
-          formData.append("file", e.target.files[0]);
-          const response = await fetch("http://127.0.0.1:8000/upload-image", {
-            method: "post",
-            body: formData,
-          });
-          const data = await response.json();
-          console.log(data.image_base64);
-          const img = document.createElement("img");
-          img.style.width = "100%";
-          img.style.height = "100%";
-          img.src = data.image_base64;
-          res.appendChild(img);
+          // Get the file
+          const file = e.target.files[0];
+          if (!file) return;
+
+          // Convert the file to a base64 string
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onloadend = async () => {
+            // Get the base64 string from the reader
+            const base64String = reader.result;
+
+            // Send the base64 string to the API
+            const response = await fetch("http://127.0.0.1:8000/upload-image", {
+              method: "post",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                image_base64: base64String,
+              }),
+            });
+
+            const data = await response.json();
+
+            // Create an img element and display the returned image
+            const img = document.createElement("img");
+            img.style.width = "100%";
+            img.style.height = "100%";
+            img.src = data.image_base64;
+            res.innerHTML = ""; // Clear previous images
+            res.appendChild(img);
+          };
         } catch (error) {
           console.log(error);
         }
