@@ -1,10 +1,12 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from pydantic import BaseModel
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+import google.generativeai as genai
 import base64
 from PIL import Image, ImageEnhance
 import io
+import numpy as np
 
 
 app = FastAPI()
@@ -25,6 +27,7 @@ class ImageBase64Request(BaseModel):
 @app.post("/upload-image/")
 async def upload_image(image_data: ImageBase64Request):
     try:
+        print("hi")
 
         # Decode the base64 image
         image_data_str = image_data.image_base64.split(",")[1]  # Remove data URI scheme if present
@@ -61,6 +64,25 @@ async def upload_image(image_data: ImageBase64Request):
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/generate_ui_recommendations")
+async def generate_ui_recommendations(image: UploadFile = File(...), prompt: str = Form(...)):
+    try:
+        image_content = await image.read()
+
+        # Convert binary data to a PIL Image
+        image_pil = Image.open(io.BytesIO(image_content))
+
+        # Convert the PIL Image to a NumPy array (buffer array)
+        image_array = np.array(image_pil)
+
+        genai.configure(api_key="AIzaSyCsnFKo_eNQC_FXS6ImzO_2pjXPlF5XlhY")
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content([prompt, image_pil])
+        return {"recommendations": response.text}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @app.get("/")
 def root():
     return {"hello": 'world'}
